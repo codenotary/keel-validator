@@ -1,0 +1,82 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: keel-validator-secrets
+type: Opaque 
+data: 
+  tc-api-key: XXX
+  tc-signer-id: XXX
+  keel-username: XXX
+  keel-password: XXX
+  registry-json-key: |
+    XXXX
+    XXXX
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keel-validator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      deployment: keel-validator
+  template:
+    metadata:
+      labels:
+        deployment: keel-validator
+    spec:
+      volumes:
+      - name: registry-json-key
+        secret:
+          secretName: keel-validator-secrets
+          items:
+          - key: registry-json-key
+            path: jsonkey.json
+      containers:
+      - name: keel-validator
+        image: codenotary/keel-validator:latest
+        env:
+        - name: APIKEY
+          valueFrom:
+            secretKeyRef:
+              name: keel-validator-secrets
+              key: tc-api-key 
+        - name: SIGNERID
+          valueFrom:
+            secretKeyRef:
+              name: keel-validator-secrets
+              key: tc-signer-id
+        - name: KEEL_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: keel-validator-secrets
+              key: keel-username 
+        - name: KEEL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: keel-validator-secrets
+              key: keel-password
+        args:
+          - --service
+          - keel.keel.svc:9300
+          - --username
+          - "$(KEEL_USERNAME)"
+          - --password
+          - "$(KEEL_PASSWORD)"
+          - --apikey
+          - "$(APIKEY)"
+          - --registry-username
+          - "_json_key"
+          - --registry-password-file
+          - "/mnt/secret/jsonkey.json"
+          - --signerID
+          - "$(SIGNERID)"
+          - --poll
+          - "60"
+        volumeMounts:
+        - mountPath: /mnt/secret
+          name: registry-json-key
+      
