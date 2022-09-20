@@ -12,9 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+FROM codenotary/vcn:latest as vcn
+
 FROM python:3.10-slim
 WORKDIR /app
 COPY requirements.txt /app/
 RUN pip install -r requirements.txt
-COPY keel-validator.py /app/  
+COPY keel-validator.py /app/
+COPY --from=vcn /bin/vcn /bin/vcn
 ENTRYPOINT ["/usr/bin/env", "python3", "/app/keel-validator.py"]
