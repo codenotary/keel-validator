@@ -85,7 +85,7 @@ def processApproval(appro):
             "--image-registry-password", args.registry_password
         ])
     if args.signerID is not None:
-        vcnArgs.extend(["--signerID", "CICDLCBackend"])
+        vcnArgs.extend(["--signerID", args.signerID])
     vcnExit = subprocess.run(vcnArgs)
     if vcnExit.returncode != 0 and not args.force:
         logging.info("image {}:{} not authenticated, stop".format(image, tag))
