@@ -95,14 +95,14 @@ def processApproval(appro):
     notifyApproval(image, tag, digest)
 
 def notifyApproval(image, tag, digest):
-    if args.mm-notify-hook!=None:
-        req = urllib.request.Request(args.mm-notify-hook)
+    if args.mm_notify_hook!=None:
+        req = urllib.request.Request(args.mm_notify_hook)
         req.add_header("Content-Type","application/json")
         data = {"text": "## Keel validator:\nNew image for {image}:{tag} has been verified and deployed.\nNew digest is {digest}".format(image=image, tag=tag, digest=digest)}
         status = None
         with urllib.request.urlopen(req, data=json.dumps(data).encode()) as resp:
             status = resp.status
-        logging.info("Mattermost notification, status: {status".format(status))
+        logging.info("Mattermost notification, status: {status}".format(status))
         
 def pollCycle():
     req = newApprovalHttpReq()
