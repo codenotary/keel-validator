@@ -36,6 +36,7 @@ parser.add_argument('--registry-password', required=False, help="docker registry
 parser.add_argument('--registry-password-file', required=False, help="file containing docker registry password ")
 parser.add_argument('--force', required=False, default=False, action='store_true', help="Force upgrade even if not authenticated")
 parser.add_argument('--poll', required=False, type=int, default=0, help="Keep running, polling time")
+parser.add_argument('--mm-notify-hook', required=False, help="Mattermost notification hook")
 
 args = parser.parse_args()
 
@@ -67,7 +68,6 @@ def handleApproval(xID, identifier, action):
         status = resp.status
     logging.info("{action} {id}: {stat}".format(action=action, id=xID, stat=status))
 
-
 def processApproval(appro):
     image = appro["event"]["repository"]["name"]
     tag = appro["event"]["repository"]["tag"]
@@ -92,8 +92,18 @@ def processApproval(appro):
         return
     logging.info("image {}:{} authenticated, go go go".format(image, tag))
     handleApproval(appro["id"], appro["identifier"], "approve")
+    notifyApproval(image, tag, digest)
 
-
+def notifyApproval(image, tag, digest):
+    if args.mm-notify-hook!=None:
+        req = urllib.request.Request(args.mm-notify-hook)
+        req.add_header("Content-Type","application/json")
+        data = {"text": "## Keel validator:\nNew image for {image}:{tag} has been verified and deployed.\nNew digest is {digest}".format(image=image, tag=tag, digest=digest)}
+        status = None
+        with urllib.request.urlopen(req, data=json.dumps(data).encode()) as resp:
+            status = resp.status
+        logging.info("Mattermost notification, status: {status".format(status))
+        
 def pollCycle():
     req = newApprovalHttpReq()
     delTreshold = datetime.datetime.now().replace(tzinfo=pytz.UTC) - datetime.timedelta(days=15)
