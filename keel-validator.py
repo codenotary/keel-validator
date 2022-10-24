@@ -102,7 +102,7 @@ def notifyApproval(image, tag, digest):
         status = None
         with urllib.request.urlopen(req, data=json.dumps(data).encode()) as resp:
             status = resp.status
-        logging.info("Mattermost notification, status: {status}".format(status))
+        logging.info("Mattermost notification, status: {status}".format(status=status))
         
 def pollCycle():
     req = newApprovalHttpReq()
