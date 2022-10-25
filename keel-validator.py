@@ -23,6 +23,7 @@ import pytz
 import subprocess
 import logging
 import time
+import re
 
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 parser = argparse.ArgumentParser(description="keel vcn-based approver service")
@@ -37,6 +38,7 @@ parser.add_argument('--registry-password-file', required=False, help="file conta
 parser.add_argument('--force', required=False, default=False, action='store_true', help="Force upgrade even if not authenticated")
 parser.add_argument('--poll', required=False, type=int, default=0, help="Keep running, polling time")
 parser.add_argument('--mm-notify-hook', required=False, help="Mattermost notification hook")
+parser.add_argument('--mm-notify-channel', required=False, help="Mattermost notification channel")
 
 args = parser.parse_args()
 
@@ -92,13 +94,22 @@ def processApproval(appro):
         return
     logging.info("image {}:{} authenticated, go go go".format(image, tag))
     handleApproval(appro["id"], appro["identifier"], "approve")
-    notifyApproval(image, tag, digest)
+    notifyApproval(image, tag, digest, appro["identifier"])
 
-def notifyApproval(image, tag, digest):
+def notifyApproval(image, tag, digest, identifier):
     if args.mm_notify_hook!=None:
+        ns=""
+        dtype="pod"
+        m=re.match("(.+)/(.+)/(.+):(.+)",identifier) # es.: deployment/cnc-mt/backend:latest
+        if m!=None:
+                ns=" on namespace `{namespace}`".format(namespace=m.group(2))
+                dtype=m.group(1)
+                tag=m.group(4)
         req = urllib.request.Request(args.mm_notify_hook)
         req.add_header("Content-Type","application/json")
-        data = {"text": "### Keel validator\nNew image for {image}:{tag} has been verified and deployed.\nNew digest is {digest}".format(image=image, tag=tag, digest=digest)}
+        data = {"text": f"### Keel validator\nNew image for {dtype} `{image}:{tag}` has been verified and deployed{ns}.\nNew digest is {digest}"}
+        if args.mm_notify_channel!=None:
+            data["channel"]=args.mm_notify_channel
         status = None
         with urllib.request.urlopen(req, data=json.dumps(data).encode()) as resp:
             status = resp.status
