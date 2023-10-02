@@ -70,6 +70,7 @@ def handleApproval(xID, identifier, action):
         status = resp.status
     logging.info("{action} {id}: {stat}".format(action=action, id=xID, stat=status))
 
+
 def processApproval(appro):
     image = appro["event"]["repository"]["name"]
     tag = appro["event"]["repository"]["tag"]
@@ -90,11 +91,12 @@ def processApproval(appro):
         vcnArgs.extend(["--signerID", args.signerID])
     vcnExit = subprocess.run(vcnArgs)
     if vcnExit.returncode != 0 and not args.force:
-        logging.info("image {}:{} not authenticated, stop".format(image, tag))
+        logging.info("image {}:{} not authenticated, stop (ref {})".format(image, tag, ref))
         return
     logging.info("image {}:{} authenticated, go go go".format(image, tag))
     handleApproval(appro["id"], appro["identifier"], "approve")
     notifyApproval(image, tag, digest, appro["identifier"])
+
 
 def notifyApproval(image, tag, digest, identifier):
     if args.mm_notify_hook!=None:
@@ -114,7 +116,8 @@ def notifyApproval(image, tag, digest, identifier):
         with urllib.request.urlopen(req, data=json.dumps(data).encode()) as resp:
             status = resp.status
         logging.info("Mattermost notification, status: {status}".format(status=status))
-        
+
+
 def pollCycle():
     req = newApprovalHttpReq()
     delTreshold = datetime.datetime.now().replace(tzinfo=pytz.UTC) - datetime.timedelta(days=15)
